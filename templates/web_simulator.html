@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🗺️ Real-Time Pathfinding Simulator</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(0,0,0,0.3);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .main-container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            height: calc(100vh - 70px);
+        }
+        
+        .sidebar {
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .section {
+            margin-bottom: 25px;
+        }
+        
+        .section-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            font-size: 0.95rem;
+        }
+        
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #3a7bd5;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,210,255,0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .btn-run {
+            background: linear-gradient(90deg, #11998e, #38ef7d);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .stat-card.dijkstra {
+            border-left: 3px solid #ff6b6b;
+        }
+        
+        .stat-card.astar {
+            border-left: 3px solid #4ecdc4;
+        }
+        
+        .stat-card h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .stat-card.dijkstra .stat-value {
+            color: #ff6b6b;
+        }
+        
+        .stat-card.astar .stat-value {
+            color: #4ecdc4;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        .map-container {
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .map-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 1000;
+            min-width: 200px;
+        }
+        
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        
+        .legend-color.dijkstra-path {
+            background: #ff6b6b;
+            height: 4px;
+        }
+        
+        .legend-color.dijkstra-visited {
+            background: rgba(255,107,107,0.3);
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .legend-color.astar-path {
+            background: #4ecdc4;
+            height: 4px;
+        }
+        
+        .legend-color.astar-visited {
+            background: rgba(78,205,196,0.3);
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .status-bar {
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #888;
+        }
+        
+        .status-dot.ready {
+            background: #38ef7d;
+        }
+        
+        .status-dot.loading {
+            background: #ffd93d;
+            animation: pulse 1s infinite;
+        }
+        
+        .status-dot.running {
+            background: #00d2ff;
+            animation: pulse 0.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .instructions {
+            background: rgba(255,255,255,0.05);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #aaa;
+            line-height: 1.5;
+        }
+        
+        .comparison-bar {
+            margin-top: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        
+        .comparison-label {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        
+        .comparison-visual {
+            display: flex;
+            height: 24px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .comparison-visual .dijkstra-bar {
+            background: #ff6b6b;
+            transition: width 0.5s ease;
+        }
+        
+        .comparison-visual .astar-bar {
+            background: #4ecdc4;
+            transition: width 0.5s ease;
+        }
+        
+        .efficiency-text {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #4ecdc4;
+            font-weight: 600;
+        }
+        
+        .point-marker {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .point-marker .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .point-marker .dot.start {
+            background: #38ef7d;
+        }
+        
+        .point-marker .dot.end {
+            background: #ff6b6b;
+        }
+        
+        .clear-btn {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 4px;
+            color: #888;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        
+        .clear-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🗺️ Real-Time Pathfinding Simulator</h1>
+        <div class="status-indicator">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Ready</span>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="section">
+                <div class="section-title">Location</div>
+                <div class="input-group">
+                    <label>City / Region</label>
+                    <select id="locationSelect">
+                        <option value="San Francisco, California">San Francisco, CA</option>
+                        <option value="Manhattan, New York">Manhattan, NY</option>
+                        <option value="London, UK">London, UK</option>
+                        <option value="Paris, France">Paris, France</option>
+                        <option value="Tokyo, Japan">Tokyo, Japan</option>
+                        <option value="Seattle, Washington">Seattle, WA</option>
+                        <option value="Chicago, Illinois">Chicago, IL</option>
+                        <option value="Dubai, UAE">Dubai, UAE</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" id="loadLocationBtn">
+                    Load Map Data
+                </button>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Points</div>
+                <div class="instructions">
+                    Click on the map to set start (green) and end (red) points.
+                </div>
+                <div id="pointsDisplay" style="margin-top: 12px;">
+                    <div class="point-marker" id="startPoint" style="display: none;">
+                        <div class="dot start"></div>
+                        <span>Start: <span id="startCoords"></span></span>
+                        <button class="clear-btn" onclick="clearStart()">✕</button>
+                    </div>
+                    <div class="point-marker" id="endPoint" style="display: none;">
+                        <div class="dot end"></div>
+                        <span>End: <span id="endCoords"></span></span>
+                        <button class="clear-btn" onclick="clearEnd()">✕</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <button class="btn btn-run" id="runSimBtn" disabled>
+                    Run Simulation
+                </button>
+                <button class="btn btn-secondary" id="clearBtn">
+                    Clear All
+                </button>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Results</div>
+                <div class="stats-container">
+                    <div class="stat-card dijkstra">
+                        <h3>Dijkstra</h3>
+                        <div class="stat-value" id="dijkstraVisited">-</div>
+                        <div class="stat-label">nodes visited</div>
+                    </div>
+                    <div class="stat-card astar">
+                        <h3>A* Search</h3>
+                        <div class="stat-value" id="astarVisited">-</div>
+                        <div class="stat-label">nodes visited</div>
+                    </div>
+                    <div class="stat-card dijkstra">
+                        <h3>Path Length</h3>
+                        <div class="stat-value" id="dijkstraPath">-</div>
+                        <div class="stat-label">nodes in path</div>
+                    </div>
+                    <div class="stat-card astar">
+                        <h3>Path Length</h3>
+                        <div class="stat-value" id="astarPath">-</div>
+                        <div class="stat-label">nodes in path</div>
+                    </div>
+                    <div class="stat-card dijkstra">
+                        <h3>Distance</h3>
+                        <div class="stat-value" id="dijkstraDistance">-</div>
+                        <div class="stat-label">kilometers</div>
+                    </div>
+                    <div class="stat-card astar">
+                        <h3>Distance</h3>
+                        <div class="stat-value" id="astarDistance">-</div>
+                        <div class="stat-label">kilometers</div>
+                    </div>
+                    <div class="stat-card dijkstra">
+                        <h3>Time</h3>
+                        <div class="stat-value" id="dijkstraTime">-</div>
+                        <div class="stat-label">milliseconds</div>
+                    </div>
+                    <div class="stat-card astar">
+                        <h3>Time</h3>
+                        <div class="stat-value" id="astarTime">-</div>
+                        <div class="stat-label">milliseconds</div>
+                    </div>
+                </div>
+                
+                <div class="comparison-bar" id="comparisonSection" style="display: none;">
+                    <div class="comparison-label">Nodes Visited Comparison</div>
+                    <div class="comparison-visual">
+                        <div class="dijkstra-bar" id="dijkstraBar" style="width: 50%;"></div>
+                        <div class="astar-bar" id="astarBar" style="width: 50%;"></div>
+                    </div>
+                    <div class="efficiency-text" id="efficiencyText"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="map-overlay">
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color dijkstra-path"></div>
+                        <span>Dijkstra Path</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color dijkstra-visited"></div>
+                        <span>Dijkstra Visited</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color astar-path"></div>
+                        <span>A* Path</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color astar-visited"></div>
+                        <span>A* Visited</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([37.7749, -122.4194], 13);
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap © CARTO',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // State
+        let startMarker = null;
+        let endMarker = null;
+        let startCoords = null;
+        let endCoords = null;
+        let dijkstraLayers = [];
+        let astarLayers = [];
+        let isLoaded = false;
+        
+        // Custom icons
+        const startIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background: #38ef7d; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3);"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+        
+        const endIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background: #ff6b6b; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3);"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+        
+        // Map click handler
+        map.on('click', function(e) {
+            if (!isLoaded) {
+                alert('Please load map data first!');
+                return;
+            }
+            
+            if (!startCoords) {
+                // Set start point
+                startCoords = [e.latlng.lat, e.latlng.lng];
+                if (startMarker) map.removeLayer(startMarker);
+                startMarker = L.marker(e.latlng, {icon: startIcon}).addTo(map);
+                
+                document.getElementById('startPoint').style.display = 'flex';
+                document.getElementById('startCoords').textContent = 
+                    `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+            } else if (!endCoords) {
+                // Set end point
+                endCoords = [e.latlng.lat, e.latlng.lng];
+                if (endMarker) map.removeLayer(endMarker);
+                endMarker = L.marker(e.latlng, {icon: endIcon}).addTo(map);
+                
+                document.getElementById('endPoint').style.display = 'flex';
+                document.getElementById('endCoords').textContent = 
+                    `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+            }
+            
+            updateRunButton();
+        });
+        
+        function clearStart() {
+            if (startMarker) map.removeLayer(startMarker);
+            startMarker = null;
+            startCoords = null;
+            document.getElementById('startPoint').style.display = 'none';
+            updateRunButton();
+        }
+        
+        function clearEnd() {
+            if (endMarker) map.removeLayer(endMarker);
+            endMarker = null;
+            endCoords = null;
+            document.getElementById('endPoint').style.display = 'none';
+            updateRunButton();
+        }
+        
+        function updateRunButton() {
+            const btn = document.getElementById('runSimBtn');
+            btn.disabled = !startCoords || !endCoords || !isLoaded;
+        }
+        
+        function setStatus(status, text) {
+            const dot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            dot.className = 'status-dot ' + status;
+            statusText.textContent = text;
+        }
+        
+        function clearVisualization() {
+            dijkstraLayers.forEach(layer => map.removeLayer(layer));
+            astarLayers.forEach(layer => map.removeLayer(layer));
+            dijkstraLayers = [];
+            astarLayers = [];
+            
+            document.getElementById('dijkstraVisited').textContent = '-';
+            document.getElementById('astarVisited').textContent = '-';
+            document.getElementById('dijkstraPath').textContent = '-';
+            document.getElementById('astarPath').textContent = '-';
+            document.getElementById('comparisonSection').style.display = 'none';
+        }
+        
+        // Load location
+        document.getElementById('loadLocationBtn').addEventListener('click', async function() {
+            const location = document.getElementById('locationSelect').value;
+            
+            setStatus('loading', 'Loading map data...');
+            this.disabled = true;
+            
+            try {
+                const response = await fetch('/api/load-location', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({location: location})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    isLoaded = true;
+                    map.setView(data.bounds.center, 13);
+                    setStatus('ready', `Loaded: ${data.nodes} nodes, ${data.edges} edges`);
+                    updateRunButton();
+                } else {
+                    setStatus('', 'Error: ' + data.error);
+                }
+            } catch (error) {
+                setStatus('', 'Error: ' + error.message);
+            }
+            
+            this.disabled = false;
+        });
+        
+        // Run simulation
+        document.getElementById('runSimBtn').addEventListener('click', async function() {
+            if (!startCoords || !endCoords) return;
+            
+            clearVisualization();
+            setStatus('running', 'Running algorithms...');
+            this.disabled = true;
+            
+            try {
+                const response = await fetch('/api/run-simulation', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        start: startCoords,
+                        end: endCoords
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Animate visited nodes
+                    await animateResults(data);
+                    setStatus('ready', 'Simulation complete!');
+                } else {
+                    setStatus('', 'Error: ' + data.error);
+                }
+            } catch (error) {
+                setStatus('', 'Error: ' + error.message);
+            }
+            
+            this.disabled = false;
+        });
+        
+        async function animateResults(data) {
+            const dijkstraVisited = data.dijkstra.visited;
+            const astarVisited = data.astar.visited;
+            const dijkstraPath = data.dijkstra.path;
+            const astarPath = data.astar.path;
+            
+            // Draw visited nodes with animation
+            const maxSteps = Math.max(dijkstraVisited.length, astarVisited.length);
+            const batchSize = Math.ceil(maxSteps / 50); // 50 animation steps
+            
+            for (let i = 0; i < maxSteps; i += batchSize) {
+                // Dijkstra visited nodes (offset to the left)
+                for (let j = i; j < Math.min(i + batchSize, dijkstraVisited.length); j++) {
+                    const coord = dijkstraVisited[j];
+                    const circle = L.circleMarker([coord[0], coord[1] - 0.0005], {
+                        radius: 3,
+                        fillColor: '#ff6b6b',
+                        fillOpacity: 0.3,
+                        stroke: false
+                    }).addTo(map);
+                    dijkstraLayers.push(circle);
+                }
+                
+                // A* visited nodes (offset to the right)
+                for (let j = i; j < Math.min(i + batchSize, astarVisited.length); j++) {
+                    const coord = astarVisited[j];
+                    const circle = L.circleMarker([coord[0], coord[1] + 0.0005], {
+                        radius: 3,
+                        fillColor: '#4ecdc4',
+                        fillOpacity: 0.3,
+                        stroke: false
+                    }).addTo(map);
+                    astarLayers.push(circle);
+                }
+                
+                // Update counters
+                document.getElementById('dijkstraVisited').textContent = 
+                    Math.min(i + batchSize, dijkstraVisited.length);
+                document.getElementById('astarVisited').textContent = 
+                    Math.min(i + batchSize, astarVisited.length);
+                
+                await new Promise(r => setTimeout(r, 30));
+            }
+            
+            // Draw paths
+            if (dijkstraPath.length > 0) {
+                const dijkstraLine = L.polyline(dijkstraPath.map(c => [c[0], c[1] - 0.0003]), {
+                    color: '#ff6b6b',
+                    weight: 4,
+                    opacity: 0.9
+                }).addTo(map);
+                dijkstraLayers.push(dijkstraLine);
+            }
+            
+            if (astarPath.length > 0) {
+                const astarLine = L.polyline(astarPath.map(c => [c[0], c[1] + 0.0003]), {
+                    color: '#4ecdc4',
+                    weight: 4,
+                    opacity: 0.9
+                }).addTo(map);
+                astarLayers.push(astarLine);
+            }
+            
+            // Update stats
+            document.getElementById('dijkstraPath').textContent = data.dijkstra.path_length;
+            document.getElementById('astarPath').textContent = data.astar.path_length;
+            document.getElementById('dijkstraDistance').textContent = data.dijkstra.distance_km + ' km';
+            document.getElementById('astarDistance').textContent = data.astar.distance_km + ' km';
+            document.getElementById('dijkstraTime').textContent = data.dijkstra.execution_time_ms + ' ms';
+            document.getElementById('astarTime').textContent = data.astar.execution_time_ms + ' ms';
+            
+            // Show comparison
+            const total = data.dijkstra.visited_count + data.astar.visited_count;
+            const dijkstraPercent = (data.dijkstra.visited_count / total) * 100;
+            const astarPercent = (data.astar.visited_count / total) * 100;
+            
+            document.getElementById('dijkstraBar').style.width = dijkstraPercent + '%';
+            document.getElementById('astarBar').style.width = astarPercent + '%';
+            
+            const efficiency = ((data.dijkstra.visited_count - data.astar.visited_count) / 
+                               data.dijkstra.visited_count * 100).toFixed(1);
+            document.getElementById('efficiencyText').textContent = 
+                `A* is ${efficiency}% more efficient (${data.astar.visited_count} vs ${data.dijkstra.visited_count} nodes)`;
+            
+            document.getElementById('comparisonSection').style.display = 'block';
+        }
+        
+        // Clear all
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            clearStart();
+            clearEnd();
+            clearVisualization();
+        });
+    </script>
+</body>
+</html>
