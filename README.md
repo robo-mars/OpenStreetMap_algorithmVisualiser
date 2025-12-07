@@ -8,11 +8,11 @@ A web-based application for visualizing and comparing A* and Dijkstra pathfindin
 
 ## Features
 
-- 🌍 **Real-world maps** from OpenStreetMap (San Francisco, Dubai, London, Tokyo, etc.)
-- ⚡ **Side-by-side comparison** of Dijkstra and A* algorithms
-- 📊 **Performance metrics**: nodes visited, execution time, distance
-- 🎨 **Animated visualization** of search process
-- 🖱️ **Interactive**: click to set start/end points
+- **Real-world maps** from OpenStreetMap (San Francisco, Dubai, London, Tokyo, etc.)
+- **Side-by-side comparison** of Dijkstra and A* algorithms
+- **Performance metrics**: nodes visited, execution time, distance
+- **Animated visualization** of search process
+- **Interactive**: click to set start/end points
 
 ## Quick Start
 
